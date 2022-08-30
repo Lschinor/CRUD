@@ -1,0 +1,201 @@
+import admin as adm
+
+def main():
+    print("""
+    [1] Para logar
+    [2] Para cadastrar
+    [3] Para ver catalogo
+    [0] Para sair""")
+
+    op = int(input('Digite a opção: '))
+    if op == 1:
+        adm.admin().login()
+    elif op == 2:
+        adm.admin().cadastro()
+    elif op == 3:
+       adm.aeronaves().listarAeronave()
+    else:
+        pass
+if __name__ == '__main__':
+    main()
+    
+       
+import pymysql.cursors
+import main
+
+class admin():
+    def __init__(self):
+        pass
+
+    def conexao(self):
+        try:
+            self.banco = pymysql.connect(
+                host= 'localhost',
+                user= 'root',
+                password= '',
+                db = 'projetoaeronave',
+                charset='utf8mb4',
+                cursorclass= pymysql.cursors.DictCursor
+            )
+            #print('Conectado')
+        except:
+            print('Erro')
+
+    def login(self):
+        global autenticado
+        self.conexao()
+        email = input('Email: ')
+        senha = input('Senha: ')
+
+
+        try:
+            with self.banco.cursor() as cursos:
+                cursos.execute('select * from admin')
+                resultados = cursos.fetchall()
+        except:
+            print("Erro, ao fazer consulta")
+        for i in resultados:
+            if email == i['email'] and senha == i['senha']:
+                autenticado = True
+                break
+            else:
+                autenticado = False
+                pass
+        if autenticado:
+            self.menuAdmin()
+        else:
+            print('Dados errados')
+            self.login()
+    def VerificaEmail(self, email):
+        self.conexao()
+        try:
+            with self.banco.cursor() as cursos:
+                cursos.execute('select * from admin')
+                resultados = cursos.fetchall()
+        except:
+            print('Erro ao fazer consulta com o bd admin')
+        for i in resultados:
+            if email == i['email']:
+                return 1
+            else:
+                pass
+        return 0
+
+    def cadastro(self):
+        cod = '123'
+        codigo = input('Digite o codigo verificador')
+        if codigo == cod:
+            nome = input('Nome: ')
+            email = input('Email: ')
+            senha = input('Senha: ')
+            dados = [nome, email, senha, 1]
+            self.conexao()
+            n = self.VerificaEmail(email)
+            if n == 1:
+                print('Email existe -  Tente realizar o login')
+                self.login()
+            else:
+                with self.banco.cursor() as cursos:
+                    sql = "insert into admin (nome, email, senha, status) values (%s, %s, %s, %s)"
+                    cursos.execute(sql, dados)
+                    self.banco.commit()
+                    print('Cadastrado')
+                    self.login()
+
+
+    def menuAdmin(self):
+        print("""
+        [1] Cadastrar nova eronave
+        [2] Alterar dados aeronaves
+        [3] Deletar aeronave
+        [4] Listar aeronaves
+        [0] Sair
+        """)
+        op = int(input('Digite a opção desejada: '))
+        if op == 0:
+            return 0
+        elif op == 1:
+            modelo = input('Modelo: ')
+            ano = int(input("Ano: "))
+            cor = input("Cor: ")
+            tipo = int(input("Tipo ('1.Avião | 2.Helicoptero| 3.Drone): "))
+            dadosAeronaves = [modelo, ano, cor, tipo]
+            aeronaves().cadastrarAeronave(dadosAeronaves)
+        elif op == 2:
+            aeronaves().alterarAeronave()
+        elif op == 3:
+            aeronaves().deletarAeronave()
+        elif op == 4:
+            aeronaves().listarAeronave()
+
+
+class aeronaves(admin):
+    def __init__(self):
+        pass
+
+    def cadastrarAeronave(self, dadosAeronave):
+        self.conexao()
+        with self.banco.cursor() as cursos:
+            sql = 'insert into aeronaves(modelo, ano, cor, tipo) values (%s, %s, %s, %s)'
+            cursos.execute(sql, dadosAeronave)
+            self.banco.commit()
+            print('Cadastrado')
+            self.menuAdmin()
+
+    def listarAeronave(self):
+        self.conexao()
+        try:
+            with self.banco.cursor() as cursos:
+                cursos.execute('select * from aeronaves')
+                aeronaves = cursos.fetchall()
+        except:
+            print('Erro ao fazer a consulta')
+
+        print('=*=' * 10)
+        print('Lista de aeronaves')
+        print('=*=' * 10)
+
+        for i in aeronaves:
+            if i['tipo'] == 1:
+                tipo = 'Avião'
+            elif i['tipo'] == 2:
+                tipo = 'Helicoptero'
+            else:
+                tipo = 'Drone'
+
+            print('id: {} - Modelo {} - Ano {} - Cor {} - Tipo {}'.format(i['idAeronave'], i['modelo'], i['ano'], i['cor'], i['tipo']))
+
+        try:
+            if autenticado:
+                self.menuAdmin()
+        except:
+            main.main()
+
+    def deletarAeronave(self):
+        self.conexao()
+        id = int(input('O Id da aeronave que deseja deletar: '))
+        with self.banco.cursor() as cursos:
+            cursos.execute('delete from aeronaves where idAeronave={}'.format(id))
+            self.banco.commit()
+            print('Deletado')
+            self.menuAdmin()
+
+    def alterarAeronave(self):
+        self.conexao()
+        id = int(input('O id da aeronave que quer alteral: '))
+        try:
+            with self.banco.cursor() as cursos:
+                cursos.execute('select * from aeronaves where idAeronave={}'.format(id))
+                aeronave = cursos.fetchall()
+        except:
+            print('erro ao fazer a consulta com o bd aeronaves')
+
+        modelo = input('Modelo({}): '.format(aeronave[0]['modelo']))
+        ano = int(input("Ano ({}): ".format(aeronave[0]['ano'])))
+        cor = input('Cor ({}): '.format(aeronave[0]['cor']))
+        tipo = int(input('Tipo ({}): '.format(aeronave[0]['tipo'])))
+        with self.banco.cursor() as cursos:
+            cursos.execute("UPDATE aeronaves SET modelo = '{}', ano = {}, cor = '{}', tipo = {} WHERE idAeronave = {}".format(modelo,ano, cor, tipo, id))
+            self.banco.commit()
+            print('Alterado')
+            self.menuAdmin()
