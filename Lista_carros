@@ -1,0 +1,125 @@
+import pymysql.cursors
+
+
+class Admin():
+    def __init__(self):
+        pass
+
+    def connection(self):
+        try:
+            self.base = pymysql.connect(
+                host='localhost',
+                user='root',
+                password='',
+                db='cars',
+                charset='utf8mb4',
+                cursorclass= pymysql.cursors.DictCursor
+            )
+            print("Connected")
+        except:
+            print("Error")
+
+
+    def register(self):
+        self.connection()
+        namecar = str(input('Car name: '))
+        yearcar = int(input('Year car: '))
+        carcolor = str(input('Car color: '))
+        how_many_doors = int(input('how_many_doors: '))
+        data = [namecar, yearcar, carcolor, how_many_doors]
+        Newcar().registercar(data)
+
+
+    def all_cars(self):
+        self.connection()
+
+        with self.base.cursor() as cursos:
+            cursos.execute('select * from allcars')
+            allcars = cursos.fetchall()
+            print(allcars)
+
+
+    def update(self):
+        self.connection()
+
+        id = int(input("Whats idcars: "))
+
+        try:
+            with self.base.cursor() as cursos:
+                cursos.execute(f'SELECT * FROM allcars WHERE idcars = {id}')
+                allcars = cursos.fetchall()
+        except:
+            print('Error, try other id ')
+
+        namecar = str(input('Car name: '))
+        yearcar = int(input('Year car: '))
+        carcolor = str(input('Car color: '))
+        how_many_doors = int(input('how_many_doors: '))
+        with self.base.cursor() as cursos:
+            cursos.execute(f'UPDATE allcars SET namecar = {namecar}, yearcar = {yearcar}, carcolor = {carcolor}, how_many_doors = {how_many_doors} where idcars = {id}')
+            self.base.commit()
+            print('Update Car')
+
+    def delete(self):
+        self.connection()
+        id = int(input("Whats ID do you wanna deleted: "))
+        with self.base.cursor() as cursos:
+            cursos.execute(f'delete from allcars where idcars = {id}')
+            self.base.commit()
+            print('Deleted car')
+
+
+class Newcar(Admin):
+    def __init__(self):
+        pass
+
+    def registercar(self, data):
+        self.connection()
+
+        with self.base.cursor() as cursos:
+            sql = 'insert into allcars(namecar, yearcar, carcolor, how_many_doors) values (%s, %s, %s, %s)'
+            cursos.execute(sql, data)
+            self.base.commit()
+            print('Register Car')
+
+
+
+
+
+
+import project
+
+def main():
+    print("""
+    [1] Register Cars
+    [2] Update cars
+    [3] Delete cars
+    [4] Show cars
+     """)
+    while True:
+        option = int(input('Whats your option? '))
+
+        if option == 1:
+            project.Admin().register()
+            break
+
+        elif option == 2:
+            project.Admin().update()
+            break
+
+        elif option == 3:
+            project.Admin().delete()
+            break
+
+        elif option == 4:
+            project.Admin().all_cars()
+            break
+
+        else:
+            print('This option not exists, try again')
+
+
+
+
+if __name__ == '__main__':
+    main()
